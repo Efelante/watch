@@ -5,14 +5,30 @@
  */
 
 #include "lvgl.h"
+//#include "lv_conf.h"
 
-void example_lvgl_demo_ui(lv_disp_t *disp)
+static lv_obj_t *label;
+
+void example_lvgl_demo_ui(lv_disp_t *disp, const char *str)
 {
     lv_obj_t *scr = lv_disp_get_scr_act(disp);
-    lv_obj_t *label = lv_label_create(scr);
-    lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL_CIRCULAR); /* Circular scroll */
-    lv_label_set_text(label, "Hello Espressif, Hello LVGL.");
+	lv_obj_clean(scr);
+    label = lv_label_create(scr);
+
+	//// Set label style
+	//lv_style_t style;
+	//lv_style_init(&style);
+	//lv_style_set_text_font(&style, &lv_font_montserrat_14);
+	//lv_obj_add_style(label, &style, 0);
+	
+    //lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL_CIRCULAR); /* Circular scroll */
+    lv_label_set_text(label, str);
     /* Size of the screen (if you use rotation 90 or 270, please set disp->driver->ver_res) */
     lv_obj_set_width(label, disp->driver->hor_res);
     lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 0);
+}
+
+void update_label(const char *str)
+{
+    lv_label_set_text(label, str);
 }

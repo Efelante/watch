@@ -15,12 +15,15 @@
 #include "esp_log.h"
 #include "lvgl.h"
 #include "esp_lvgl_port.h"
+#include "esp_sleep.h"
 
 #if CONFIG_EXAMPLE_LCD_CONTROLLER_SH1107
 #include "esp_lcd_sh1107.h"
 #else
 #include "esp_lcd_panel_vendor.h"
 #endif
+
+#include "sntp_example_main.h"
 
 static const char *TAG = "example";
 
@@ -47,7 +50,7 @@ static const char *TAG = "example";
 #define EXAMPLE_LCD_CMD_BITS           8
 #define EXAMPLE_LCD_PARAM_BITS         8
 
-extern void example_lvgl_demo_ui(lv_disp_t *disp);
+extern void example_lvgl_demo_ui(lv_disp_t *disp, const char *str);
 
 /* The LVGL port component calls esp_lcd_panel_draw_bitmap API for send data to the screen. There must be called
 lvgl_port_flush_ready(disp) after each transaction to display. The best way is to use on_color_trans_done
@@ -61,6 +64,8 @@ static bool notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io, esp_lcd_
 
 void app_main(void)
 {
+
+
     ESP_LOGI(TAG, "Initialize I2C bus");
     i2c_config_t i2c_conf = {
         .mode = I2C_MODE_MASTER,
@@ -138,8 +143,22 @@ void app_main(void)
     esp_lcd_panel_io_register_event_callbacks(io_handle, &cbs, disp);
 
     /* Rotation of the screen */
-    lv_disp_set_rotation(disp, LV_DISP_ROT_NONE);
+    lv_disp_set_rotation(disp, LV_DISP_ROT_180);
 
-    ESP_LOGI(TAG, "Display LVGL Scroll Text");
-    example_lvgl_demo_ui(disp);
+	char timebuf[128] = {0};
+	sntp_app_main(timebuf);
+	//ESP_LOGI(TAG, "Display LVGL Scroll Text");
+	
+	example_lvgl_demo_ui(disp, timebuf);
+	while (1) {
+		sntp_app_main(timebuf);
+		update_label(timebuf);
+		//esp_sleep_enable_timer_wakeup(1000000);
+		//esp_light_sleep_start();
+	}
+
+
+    //const int deep_sleep_sec = 1;
+    //ESP_LOGI(TAG, "Entering deep sleep for %d seconds", deep_sleep_sec);
+    //esp_deep_sleep(1000000LL * deep_sleep_sec);
 }
