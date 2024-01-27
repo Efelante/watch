@@ -23,6 +23,8 @@
 #include "esp_lcd_panel_vendor.h"
 #endif
 
+static void periodic_timer_callback(void* arg);
+
 #include "sntp_example_main.h"
 
 static const char *TAG = "example";
@@ -145,20 +147,45 @@ void app_main(void)
     /* Rotation of the screen */
     lv_disp_set_rotation(disp, LV_DISP_ROT_180);
 
+	// Create a periodic timer which will run every second and update the screen
+    const esp_timer_create_args_t periodic_timer_args = {
+            .callback = &periodic_timer_callback,
+            /* name is optional, but may help identify the timer when debugging */
+            .name = "periodic"
+    };
+
+    esp_timer_handle_t periodic_timer;
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
+    /* The timer has been created but is not running yet */
+
+
+
 	char timebuf[128] = {0};
 	sntp_app_main(timebuf);
 	//ESP_LOGI(TAG, "Display LVGL Scroll Text");
 	
+    /* Start the timers */
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, 1000000));
+	
 	example_lvgl_demo_ui(disp, timebuf);
 	while (1) {
-		sntp_app_main(timebuf);
-		update_label(timebuf);
-		//esp_sleep_enable_timer_wakeup(1000000);
-		//esp_light_sleep_start();
+		//sntp_app_main(timebuf);
+		//update_label(timebuf);
+		////esp_sleep_enable_timer_wakeup(1000000);
+		////esp_light_sleep_start();
 	}
 
 
     //const int deep_sleep_sec = 1;
     //ESP_LOGI(TAG, "Entering deep sleep for %d seconds", deep_sleep_sec);
     //esp_deep_sleep(1000000LL * deep_sleep_sec);
+}
+
+static void periodic_timer_callback(void* arg)
+{
+    int64_t time_since_boot = esp_timer_get_time();
+    ESP_LOGI(TAG, "Periodic timer called, time since boot: %lld us", time_since_boot);
+	char timebuf[128] = {0};
+	sntp_app_main(timebuf);
+	update_label(timebuf);
 }
