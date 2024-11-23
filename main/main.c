@@ -39,26 +39,26 @@ static const char *TAG = "example";
 
 #define I2C_HOST  0
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////// Please update the following configuration according to your LCD spec //////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define EXAMPLE_LCD_PIXEL_CLOCK_HZ    (400 * 1000)
-#define EXAMPLE_PIN_NUM_SDA          	21 
-#define EXAMPLE_PIN_NUM_SCL          	22 
-#define EXAMPLE_PIN_NUM_RST           -1
-#define EXAMPLE_I2C_HW_ADDR           0x3C
+//////////////////////////////////////////////////////////////////////////
+// Please update the following configuration according to your LCD spec //
+//////////////////////////////////////////////////////////////////////////
+#define EXAMPLE_LCD_PIXEL_CLOCK_HZ	(400 * 1000)
+#define EXAMPLE_PIN_NUM_SDA        	21 
+#define EXAMPLE_PIN_NUM_SCL        	22 
+#define EXAMPLE_PIN_NUM_RST         -1
+#define EXAMPLE_I2C_HW_ADDR         0x3C
 
 // The pixel number in horizontal and vertical
 #if CONFIG_EXAMPLE_LCD_CONTROLLER_SSD1306
-#define EXAMPLE_LCD_H_RES              128
-#define EXAMPLE_LCD_V_RES              64
+#define EXAMPLE_LCD_H_RES			128
+#define EXAMPLE_LCD_V_RES			64
 #elif CONFIG_EXAMPLE_LCD_CONTROLLER_SH1107
-#define EXAMPLE_LCD_H_RES              64
-#define EXAMPLE_LCD_V_RES              128
+#define EXAMPLE_LCD_H_RES			64
+#define EXAMPLE_LCD_V_RES			128
 #endif
 // Bit number used to represent command and parameter
-#define EXAMPLE_LCD_CMD_BITS           8
-#define EXAMPLE_LCD_PARAM_BITS         8
+#define EXAMPLE_LCD_CMD_BITS		8
+#define EXAMPLE_LCD_PARAM_BITS		8
 
 extern void example_lvgl_demo_ui(lv_disp_t *disp, const char *str);
 
@@ -283,7 +283,9 @@ void app_main(void)
             .mirror_y = false,
         }
     };
-    lv_disp_t * disp = lvgl_port_add_disp(&disp_cfg);
+
+    lv_disp_t *disp = lvgl_port_add_disp(&disp_cfg);
+
     /* Register done callback for IO */
     const esp_lcd_panel_io_callbacks_t cbs = {
         .on_color_trans_done = notify_lvgl_flush_ready,
@@ -297,7 +299,7 @@ void app_main(void)
     const esp_timer_create_args_t periodic_timer_args = {
             .callback = &periodic_timer_callback,
             /* name is optional, but may help identify the timer when debugging */
-            .name = "periodic"
+            .name = "screen_update_periodic"
     };
 
     esp_timer_handle_t periodic_timer;
@@ -305,6 +307,7 @@ void app_main(void)
     /* The timer has been created but is not running yet */
 
 	char timebuf[128] = {0};
+
 	char connect_status_str[128] = {0};
 	sprintf(connect_status_str, "%s %s", "Con. to ", CONFIG_EXAMPLE_WIFI_SSID);
 	example_lvgl_demo_ui(disp, connect_status_str);
