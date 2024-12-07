@@ -309,7 +309,7 @@ void app_main(void)
 	char timebuf[128] = {0};
 
 	char connect_status_str[128] = {0};
-	sprintf(connect_status_str, "%s %s", "Con. to ", CONFIG_EXAMPLE_WIFI_SSID);
+	sprintf(connect_status_str, "%s %s", "Connect to ", CONFIG_EXAMPLE_WIFI_SSID);
 	example_lvgl_demo_ui(disp, connect_status_str);
 	sntp_app_main(timebuf);
 	
@@ -324,21 +324,6 @@ void app_main(void)
 #if CONFIG_EXAMPLE_GPIO_WAKEUP
     /* Enable wakeup from deep sleep by gpio */
     example_deep_sleep_register_gpio_wakeup();
-#endif
-
-#if CONFIG_EXAMPLE_EXT0_WAKEUP
-    /* Enable wakeup from deep sleep by ext0 */
-    example_deep_sleep_register_ext0_wakeup();
-#endif
-
-#if CONFIG_EXAMPLE_EXT1_WAKEUP
-    /* Enable wakeup from deep sleep by ext1 */
-    example_deep_sleep_register_ext1_wakeup();
-#endif
-
-#if CONFIG_EXAMPLE_TOUCH_WAKEUP
-    /* Enable wakeup from deep sleep by touch */
-    example_deep_sleep_register_touch_wakeup();
 #endif
 
     xTaskCreate(deep_sleep_task, "deep_sleep_task", 4096, (void *) &panel_handle, 6, NULL);
