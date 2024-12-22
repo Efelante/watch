@@ -15,11 +15,11 @@ void example_lvgl_demo_ui(lv_disp_t *disp, const char *str)
 	lv_obj_clean(scr);
     label = lv_label_create(scr);
 
-	//// Set label style
-	//lv_style_t style;
-	//lv_style_init(&style);
-	//lv_style_set_text_font(&style, &lv_font_montserrat_14);
-	//lv_obj_add_style(label, &style, 0);
+	// Set label style
+	lv_style_t style;
+	lv_style_init(&style);
+	lv_style_set_text_font(&style, &lv_font_montserrat_14);
+	lv_obj_add_style(label, &style, 0);
 	
     //lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL_CIRCULAR); /* Circular scroll */
     lv_label_set_text(label, str);
@@ -31,4 +31,9 @@ void example_lvgl_demo_ui(lv_disp_t *disp, const char *str)
 void update_label(const char *str)
 {
     lv_label_set_text(label, str);
+}
+
+void clrscr()
+{
+	lv_obj_clean(lv_scr_act());
 }
