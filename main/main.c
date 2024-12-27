@@ -98,17 +98,17 @@ void app_main(void)
     const esp_timer_create_args_t periodic_timer_args = {
             .callback = &periodic_timer_callback,
             /* name is optional, but may help identify the timer when debugging */
-            .name = "screen_update_periodic"
+            .name = "scrn_upd_periodic"
     };
 
     esp_timer_handle_t periodic_timer;
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
     /* The timer has been created but is not running yet */
 
-	char timebuf[128] = {0};
+	char timebuf[30] = {0};
 
-	char connect_status_str[128] = {0};
-	sprintf(connect_status_str, "%s %s", "Connect to ", CONFIG_EXAMPLE_WIFI_SSID);
+	char connect_status_str[30] = {0};
+	sprintf(connect_status_str, "%s %s", "Con to ", CONFIG_EXAMPLE_WIFI_SSID);
 	example_lvgl_demo_ui(disp, connect_status_str);
 	sntp_app_main(timebuf);
 
@@ -148,7 +148,7 @@ void app_main(void)
 
 static void deep_sleep_task(void *args)
 {
-	char timebuf[128] = {0};
+	char timebuf[30] = {0};
     esp_lcd_panel_handle_t *panel_handle = (esp_lcd_panel_handle_t *) args;
 
 	//sntp_app_main(timebuf);
@@ -395,7 +395,7 @@ static void periodic_timer_callback(void* arg)
 {
     int64_t time_since_boot = esp_timer_get_time();
     ESP_LOGI(TAG, "Periodic timer called, time since boot: %lld us", time_since_boot);
-	char timebuf[128] = {0};
+	char timebuf[30] = {0};
 	if (show_timer < 8) {
 		sntp_app_main(timebuf);
 	} else {
