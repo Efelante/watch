@@ -28,6 +28,7 @@
 #include "deep_sleep_example.h"
 #include "sntp.h"
 #include "lvgl_watch.h"
+#include "gatt_client_coospo_h808s.h"
 
 
 #if CONFIG_EXAMPLE_LCD_CONTROLLER_SH1107
@@ -110,6 +111,9 @@ void app_main(void)
 	sprintf(connect_status_str, "%s %s", "Connect to ", CONFIG_EXAMPLE_WIFI_SSID);
 	example_lvgl_demo_ui(disp, connect_status_str);
 	sntp_app_main(timebuf);
+
+	// Connect to heart rate monitor
+	gatt_init();
 	
     /* Start the timers */
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, 1000000));
