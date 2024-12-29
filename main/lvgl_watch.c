@@ -5,32 +5,66 @@
  */
 
 #include "lvgl.h"
+
+//#define PULSE_SYMBOL "\xEF\x80\x84"
+#define PULSE_SYMBOL "BPM: "
+
 //#include "lv_conf.h"
 
-static lv_obj_t *label;
+static lv_obj_t *time_label;
+static lv_obj_t *pulse_label;
+static lv_obj_t *pulse_symbol_label;
 
-void example_lvgl_demo_ui(lv_disp_t *disp, const char *str)
+void set_lvgl_ui(lv_disp_t *disp, const char *str)
 {
     lv_obj_t *scr = lv_disp_get_scr_act(disp);
+
 	lv_obj_clean(scr);
-    label = lv_label_create(scr);
+
+	// Time label
+    time_label = lv_label_create(scr);
+
+	// Set time label style
+	lv_style_t time_label_style;
+	lv_style_init(&time_label_style);
+	lv_style_set_text_font(&time_label_style, &lv_font_montserrat_18);
+	lv_obj_add_style(time_label, &time_label_style, 0);
+	
+    lv_label_set_text(time_label, str);
+    /* Size of the screen (if you use rotation 90 or 270, please set disp->driver->ver_res) */
+    lv_obj_set_width(time_label, disp->driver->hor_res);
+    lv_obj_align(time_label, LV_ALIGN_TOP_MID, 0, 0);
+
+	// Pulse symbol label
+    //pulse_symbol_label = lv_label_create(scr);
+	//lv_label_set_text(pulse_symbol_label, PULSE_SYMBOL);
+    //lv_obj_set_width(pulse_symbol_label, disp->driver->hor_res);
+    //lv_obj_align(pulse_symbol_label, LV_ALIGN_TOP_MID, 0, 40);
+
+	// Pulse label
+    pulse_label = lv_label_create(scr);
 
 	// Set label style
-	lv_style_t style;
-	lv_style_init(&style);
-	lv_style_set_text_font(&style, &lv_font_montserrat_14);
-	lv_obj_add_style(label, &style, 0);
+	lv_style_t pulse_label_style;
+	lv_style_init(&pulse_label_style);
+	lv_style_set_text_font(&pulse_label_style, &lv_font_montserrat_18);
+	lv_obj_add_style(pulse_label, &pulse_label_style, 0);
 	
-    //lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL_CIRCULAR); /* Circular scroll */
-    lv_label_set_text(label, str);
+
+    lv_label_set_text(pulse_label, "--");
     /* Size of the screen (if you use rotation 90 or 270, please set disp->driver->ver_res) */
-    lv_obj_set_width(label, disp->driver->hor_res);
-    lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_set_width(pulse_label, disp->driver->hor_res);
+    lv_obj_align(pulse_label, LV_ALIGN_TOP_MID, 0, 40);
 }
 
-void update_label(const char *str)
+void update_time_label(const char *str)
 {
-    lv_label_set_text(label, str);
+    lv_label_set_text(time_label, str);
+}
+
+void update_pulse_label(const char *str)
+{
+    lv_label_set_text(pulse_label, str);
 }
 
 void clrscr()

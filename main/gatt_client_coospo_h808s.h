@@ -10,8 +10,6 @@
 
 #define COOSPO_H808S_NAME "808S 0006976"
 
-extern uint8_t pulse_value;
-
 /* Declare functions */
 void coospo_connect(void);
 

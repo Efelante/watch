@@ -38,6 +38,7 @@
 #endif
 
 static const char *TAG = "watch";
+extern uint8_t pulse_value;
 
 #define I2C_HOST  0
 
@@ -78,7 +79,6 @@ static esp_lcd_panel_io_handle_t 	install_panel_io(void);
 static esp_lcd_panel_handle_t 		install_ssd1306_panel_driver(esp_lcd_panel_io_handle_t io_handle);
 static bool 						notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx);
 static lv_disp_t* 					lvgl_init(esp_lcd_panel_io_handle_t io_handle, esp_lcd_panel_handle_t panel_handle);
-extern void 						example_lvgl_demo_ui(lv_disp_t *disp, const char *str);
 
 
 void app_main(void)
@@ -109,7 +109,7 @@ void app_main(void)
 
 	char connect_status_str[128] = {0};
 	sprintf(connect_status_str, "%s %s", "Con to ", CONFIG_EXAMPLE_WIFI_SSID);
-	example_lvgl_demo_ui(disp, connect_status_str);
+	set_lvgl_ui(disp, connect_status_str);
 	sntp_app_main(timebuf);
 
 	// Connect to heart rate monitor
@@ -118,7 +118,7 @@ void app_main(void)
     /* Start the timers */
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, 1000000));
 	
-	example_lvgl_demo_ui(disp, timebuf);
+	set_lvgl_ui(disp, timebuf);
 
     /* Enable wakeup from deep sleep by rtc timer */
     //example_deep_sleep_register_rtc_timer_wakeup();
@@ -153,7 +153,7 @@ static void deep_sleep_task(void *args)
     esp_lcd_panel_handle_t *panel_handle = (esp_lcd_panel_handle_t *) args;
 
 	//sntp_app_main(timebuf);
-	//update_label(timebuf);
+	//update_time_label(timebuf);
 
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(*panel_handle, true));
 	printf("timebuf: %s\n", timebuf);
@@ -404,6 +404,7 @@ static void periodic_timer_callback(void* arg)
     int64_t time_since_boot = esp_timer_get_time();
     ESP_LOGI(TAG, "Periodic timer called, time since boot: %lld us", time_since_boot);
 	char timebuf[128] = {0};
+	char pulsebuf[128] = {0};
 #if 1
 	sntp_app_main(timebuf);
 #else
@@ -413,7 +414,11 @@ static void periodic_timer_callback(void* arg)
 	//	timebuf[0] = '\0';
 	//}
 #endif
-	update_label(timebuf);
+	update_time_label(timebuf);
+
+	sprintf(pulsebuf, "%i", pulse_value);
+	update_pulse_label(pulsebuf);
+
 	show_timer++;
 }
 
