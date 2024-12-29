@@ -33,6 +33,8 @@
 
 #include "gatt_client_coospo_h808s.h"
 
+uint8_t pulse_value = 0;
+
 //#define GATTC_TAG "GATTC_DEMO"
 ////#define REMOTE_SERVICE_UUID        0x00FF
 ////#define REMOTE_NOTIFY_CHAR_UUID    0xFF01
@@ -438,7 +440,7 @@ static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp
     } while (0);
 }
 
-void app_main(void)
+void coospo_connect(void)
 {
     // Initialize NVS.
     esp_err_t ret = nvs_flash_init();

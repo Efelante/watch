@@ -13,7 +13,7 @@
 extern uint8_t pulse_value;
 
 /* Declare functions */
-void gatt_init(void);
+void coospo_connect(void);
 
 #endif //__GATT__H808S__
 

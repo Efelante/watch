@@ -105,15 +105,15 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
     /* The timer has been created but is not running yet */
 
-	char timebuf[30] = {0};
+	char timebuf[128] = {0};
 
-	char connect_status_str[30] = {0};
+	char connect_status_str[128] = {0};
 	sprintf(connect_status_str, "%s %s", "Con to ", CONFIG_EXAMPLE_WIFI_SSID);
 	example_lvgl_demo_ui(disp, connect_status_str);
 	sntp_app_main(timebuf);
 
 	// Connect to heart rate monitor
-	gatt_init();
+	coospo_connect();
 	
     /* Start the timers */
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, 1000000));
@@ -140,7 +140,7 @@ void app_main(void)
 
 #if CONFIG_EXAMPLE_TOUCH_WAKEUP
     /* Enable wakeup from deep sleep by touch */
-    //example_deep_sleep_register_touch_wakeup();
+    example_deep_sleep_register_touch_wakeup();
 #endif
 
     xTaskCreate(deep_sleep_task, "deep_sleep_task", 4096, (void *) &panel_handle, 6, NULL);
@@ -148,7 +148,8 @@ void app_main(void)
 
 static void deep_sleep_task(void *args)
 {
-	char timebuf[30] = {0};
+	printf("ENTER DEEP SLEEP TASK\n");
+	char timebuf[128] = {0};
     esp_lcd_panel_handle_t *panel_handle = (esp_lcd_panel_handle_t *) args;
 
 	//sntp_app_main(timebuf);
@@ -188,6 +189,8 @@ static void deep_sleep_task(void *args)
     struct timeval now;
     gettimeofday(&now, NULL);
     int sleep_time_ms = (now.tv_sec - sleep_enter_time.tv_sec) * 1000 + (now.tv_usec - sleep_enter_time.tv_usec) / 1000;
+
+	printf("Check wakeup cause\n");
 
     switch (esp_sleep_get_wakeup_cause()) {
         case ESP_SLEEP_WAKEUP_TIMER: {
@@ -248,6 +251,11 @@ static void deep_sleep_task(void *args)
     // to minimize current consumption.
     rtc_gpio_isolate(GPIO_NUM_12);
 #endif
+
+	while(1)
+	{
+		;
+	}
 
 	// Wait 10 seconds before entring deep sleep
 	// show_timer is increased by the periodic 1s timer
@@ -395,12 +403,16 @@ static void periodic_timer_callback(void* arg)
 {
     int64_t time_since_boot = esp_timer_get_time();
     ESP_LOGI(TAG, "Periodic timer called, time since boot: %lld us", time_since_boot);
-	char timebuf[30] = {0};
-	if (show_timer < 8) {
-		sntp_app_main(timebuf);
-	} else {
-		timebuf[0] = '\0';
-	}
+	char timebuf[128] = {0};
+#if 1
+	sntp_app_main(timebuf);
+#else
+	//if (show_timer < 8) {
+	//	sntp_app_main(timebuf);
+	//} else {
+	//	timebuf[0] = '\0';
+	//}
+#endif
 	update_label(timebuf);
 	show_timer++;
 }
