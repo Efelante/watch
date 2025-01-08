@@ -108,7 +108,7 @@ void app_main(void)
 	char timebuf[128] = {0};
 
 	char connect_status_str[128] = {0};
-	sprintf(connect_status_str, "%s %s", "Con to ", CONFIG_EXAMPLE_WIFI_SSID);
+	sprintf(connect_status_str, "%s %s", LV_SYMBOL_WIFI, CONFIG_EXAMPLE_WIFI_SSID);
 	set_lvgl_ui(disp, connect_status_str);
 	sntp_app_main(timebuf);
 
@@ -254,6 +254,7 @@ static void deep_sleep_task(void *args)
 
 	while(1)
 	{
+		vTaskDelay(100 / portTICK_PERIOD_MS);
 		;
 	}
 
