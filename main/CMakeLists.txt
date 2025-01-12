@@ -1,4 +1,18 @@
-idf_component_register(SRCS "main.c" "lvgl_watch.c" "sntp.c" "ext_wakeup.c" "gpio_wakeup.c" "touch_wakeup.c" "gatt_client_coospo_h808s.c"
-                       INCLUDE_DIRS ".")
+idf_component_register(SRCS "main.c" 
+							"lvgl_watch.c" 
+							"sntp.c" 
+							"ext_wakeup.c" 
+							"gpio_wakeup.c" 
+							"touch_wakeup.c" 
+							"gatt_client_coospo_h808s.c"
+							"max30100libc/circular_buffer.c"
+							"max30100libc/max30100.c"
+							"max30100libc/max30100_SpO2_calculator.c"
+							"max30100libc/max30100_beat_detector.c"
+							"max30100libc/max30100_pulseoximeter.c"
+							"max30100libc/max30100_filters.c"
+                       INCLUDE_DIRS "." 
+					   "max30100libc"
+				   )
 
 

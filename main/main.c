@@ -18,6 +18,7 @@
 #include "esp_lcd_panel_ops.h"
 #include "driver/rtc_io.h"
 #include "driver/i2c.h"
+#include "driver/i2c_master.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "lvgl.h"
@@ -29,6 +30,22 @@
 #include "sntp.h"
 #include "lvgl_watch.h"
 #include "gatt_client_coospo_h808s.h"
+
+#include "circular_buffer.h"
+#include "max30100.h"
+#include "max30100_pulseoximeter.h"
+
+#define I2C_MASTER_SCL_IO           22 //CONFIG_I2C_MASTER_SCL       /*!< GPIO number used for I2C master clock */
+#define I2C_MASTER_SDA_IO           21 //CONFIG_I2C_MASTER_SDA       /*!< GPIO number used for I2C master data  */
+#define I2C_MASTER_NUM              0  //I2C_NUM_0                   /*!< I2C port number for master dev */
+#define I2C_MASTER_FREQ_HZ          400000 //CONFIG_I2C_MASTER_FREQUENCY /*!< I2C master clock frequency */
+#define I2C_MASTER_TX_BUF_DISABLE   0                           /*!< I2C master doesn't need buffer */
+#define I2C_MASTER_RX_BUF_DISABLE   0                           /*!< I2C master doesn't need buffer */
+#define I2C_MASTER_TIMEOUT_MS       1000
+
+#define MAX30100_SENSOR_ADDR       	0x57        /*!< Address of the MAX30100 sensor */
+
+#define REPORTING_PERIOD_MS     	1000
 
 
 #if CONFIG_EXAMPLE_LCD_CONTROLLER_SH1107
@@ -75,7 +92,9 @@ static void 						periodic_timer_callback(void* arg);
 static void 						deep_sleep_task(void *args);
 static void 						__attribute__((unused)) example_deep_sleep_register_rtc_timer_wakeup(void);
 static void 						i2c_init();
-static esp_lcd_panel_io_handle_t 	install_panel_io(void);
+static void 						i2c_master_init(i2c_master_bus_handle_t *bus_handle, i2c_master_dev_handle_t *dev_handle);
+//static esp_lcd_panel_io_handle_t 	install_panel_io(void);
+static esp_lcd_panel_io_handle_t 	install_panel_io(i2c_master_bus_handle_t *bus_handle);
 static esp_lcd_panel_handle_t 		install_ssd1306_panel_driver(esp_lcd_panel_io_handle_t io_handle);
 static bool 						notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx);
 static lv_disp_t* 					lvgl_init(esp_lcd_panel_io_handle_t io_handle, esp_lcd_panel_handle_t panel_handle);
@@ -83,9 +102,13 @@ static lv_disp_t* 					lvgl_init(esp_lcd_panel_io_handle_t io_handle, esp_lcd_pa
 
 void app_main(void)
 {
-	i2c_init();
+	//i2c_init();
+    i2c_master_bus_handle_t bus_handle;
+    i2c_master_dev_handle_t dev_handle;
+    i2c_master_init(&bus_handle, &dev_handle);
+    printf("I2C initialized successfully");
 
-	esp_lcd_panel_io_handle_t io_handle = install_panel_io();
+	esp_lcd_panel_io_handle_t io_handle = install_panel_io(&bus_handle);
 
     esp_lcd_panel_handle_t panel_handle = install_ssd1306_panel_driver(io_handle);
 
@@ -254,7 +277,7 @@ static void deep_sleep_task(void *args)
 
 	while(1)
 	{
-		vTaskDelay(100 / portTICK_PERIOD_MS);
+		vTaskDelay(10 / portTICK_PERIOD_MS);
 		;
 	}
 
@@ -310,12 +333,37 @@ static void i2c_init()
     ESP_ERROR_CHECK(i2c_driver_install(I2C_HOST, I2C_MODE_MASTER, 0, 0, 0));
 }
 
-static esp_lcd_panel_io_handle_t install_panel_io(void)
+/**
+ * @brief i2c master initialization
+ */
+static void i2c_master_init(i2c_master_bus_handle_t *bus_handle, i2c_master_dev_handle_t *dev_handle)
+{
+    i2c_master_bus_config_t bus_config = {
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .glitch_ignore_cnt = 7,
+        .i2c_port = I2C_MASTER_NUM,
+        .sda_io_num = (gpio_num_t) I2C_MASTER_SDA_IO,
+        .scl_io_num = (gpio_num_t) I2C_MASTER_SCL_IO,
+        .flags.enable_internal_pullup = true
+    };
+
+    ESP_ERROR_CHECK(i2c_new_master_bus(&bus_config, bus_handle));
+
+    i2c_device_config_t dev_config = {
+        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+        .device_address = MAX30100_SENSOR_ADDR,
+        .scl_speed_hz = I2C_MASTER_FREQ_HZ,
+    };
+    ESP_ERROR_CHECK(i2c_master_bus_add_device(*bus_handle, &dev_config, dev_handle));
+}
+
+static esp_lcd_panel_io_handle_t install_panel_io(i2c_master_bus_handle_t *bus_handle)
 {
     ESP_LOGI(TAG, "Install panel IO");
     esp_lcd_panel_io_handle_t io_handle = NULL;
     esp_lcd_panel_io_i2c_config_t io_config = {
         .dev_addr = EXAMPLE_I2C_HW_ADDR,
+        .scl_speed_hz = EXAMPLE_LCD_PIXEL_CLOCK_HZ,
         .control_phase_bytes = 1,               // According to SSD1306 datasheet
         .lcd_cmd_bits = EXAMPLE_LCD_CMD_BITS,   // According to SSD1306 datasheet
         .lcd_param_bits = EXAMPLE_LCD_CMD_BITS, // According to SSD1306 datasheet
@@ -329,7 +377,8 @@ static esp_lcd_panel_io_handle_t install_panel_io(void)
         }
 #endif
     };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c((esp_lcd_i2c_bus_handle_t)I2C_HOST, &io_config, &io_handle));
+    //ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c((esp_lcd_i2c_bus_handle_t)I2C_HOST, &io_config, &io_handle));
+    ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c(*bus_handle, &io_config, &io_handle));
 	return io_handle;
 }
 
@@ -341,7 +390,24 @@ static esp_lcd_panel_handle_t install_ssd1306_panel_driver(esp_lcd_panel_io_hand
         .bits_per_pixel = 1,
         .reset_gpio_num = EXAMPLE_PIN_NUM_RST,
     };
+//#if CONFIG_EXAMPLE_LCD_CONTROLLER_SSD1306
+//    ESP_ERROR_CHECK(esp_lcd_new_panel_ssd1306(io_handle, &panel_config, &panel_handle));
+//#elif CONFIG_EXAMPLE_LCD_CONTROLLER_SH1107
+//    ESP_ERROR_CHECK(esp_lcd_new_panel_sh1107(io_handle, &panel_config, &panel_handle));
+//#endif
+//
+//    ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
+//    ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
+//    ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
+//
+//#if CONFIG_EXAMPLE_LCD_CONTROLLER_SH1107
+//    ESP_ERROR_CHECK(esp_lcd_panel_invert_color(panel_handle, true));
+//#endif
 #if CONFIG_EXAMPLE_LCD_CONTROLLER_SSD1306
+    esp_lcd_panel_ssd1306_config_t ssd1306_config = {
+        .height = EXAMPLE_LCD_V_RES,
+    };
+    panel_config.vendor_config = &ssd1306_config;
     ESP_ERROR_CHECK(esp_lcd_new_panel_ssd1306(io_handle, &panel_config, &panel_handle));
 #elif CONFIG_EXAMPLE_LCD_CONTROLLER_SH1107
     ESP_ERROR_CHECK(esp_lcd_new_panel_sh1107(io_handle, &panel_config, &panel_handle));
@@ -371,7 +437,9 @@ static lv_disp_t* lvgl_init(esp_lcd_panel_io_handle_t io_handle,
 					 esp_lcd_panel_handle_t panel_handle)
 {
     ESP_LOGI(TAG, "Initialize LVGL");
+
     const lvgl_port_cfg_t lvgl_cfg = ESP_LVGL_PORT_INIT_CONFIG();
+
     lvgl_port_init(&lvgl_cfg);
 
     const lvgl_port_display_cfg_t disp_cfg = {
@@ -406,6 +474,7 @@ static void periodic_timer_callback(void* arg)
     ESP_LOGI(TAG, "Periodic timer called, time since boot: %lld us", time_since_boot);
 	char timebuf[128] = {0};
 	char pulsebuf[128] = {0};
+	char pulsebuf_2[128] = {0};
 #if 1
 	sntp_app_main(timebuf);
 #else
@@ -417,8 +486,11 @@ static void periodic_timer_callback(void* arg)
 #endif
 	update_time_label(timebuf);
 
-	sprintf(pulsebuf, "%i", pulse_value);
+	sprintf(pulsebuf, "%i %i", pulse_value, pulse_value);
 	update_pulse_label(pulsebuf);
+
+	//sprintf(pulsebuf_2, "%i", pulse_value);
+	//update_pulse_label_2(pulsebuf_2);
 
 	show_timer++;
 }
