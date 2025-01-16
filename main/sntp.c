@@ -85,7 +85,7 @@ void sntp_app_main(char *outtimebuf)
 #endif
 
     char strftime_buf[64];
-
+#if 0
     // Set timezone to Eastern Standard Time and print local time
     setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0", 1);
     tzset();
@@ -100,15 +100,16 @@ void sntp_app_main(char *outtimebuf)
     strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
     ESP_LOGI(TAG, "The current date/time in Shanghai is: %s", strftime_buf);
 
+#endif
     // Set timezone to Moscow Standard Time
     setenv("TZ", "MSK-3", 1);
     tzset();
     localtime_r(&now, &timeinfo);
     strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
     ESP_LOGI(TAG, "The current date/time in Moscow is: %s", strftime_buf);
-
 	// Put time string in the output buf
-    strftime(strftime_buf, sizeof(strftime_buf), "%x\n%X", &timeinfo);
+    //strftime(strftime_buf, sizeof(strftime_buf), "%x\n%X", &timeinfo);
+    strftime(strftime_buf, sizeof(strftime_buf), "%X", &timeinfo);	// Time only, without date
     sprintf(outtimebuf, "%s", strftime_buf);
 
     if (sntp_get_sync_mode() == SNTP_SYNC_MODE_SMOOTH) {

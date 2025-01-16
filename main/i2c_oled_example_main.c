@@ -22,15 +22,17 @@
 #include "driver/i2c_master.h"
 #include "lvgl.h"
 
+// Wi-fi
+#include "nvs_flash.h"
+#include "nvs.h"
+#include "sntp.h"
+
+
 #if CONFIG_EXAMPLE_LCD_CONTROLLER_SH1107
 #include "esp_lcd_sh1107.h"
 #else
 #include "esp_lcd_panel_vendor.h"
 #endif
-
-#include "lvgl_watch.h"
-
-static const char *TAG = "example";
 
 #define I2C_BUS_PORT  0
 
@@ -59,6 +61,75 @@ static const char *TAG = "example";
 #define EXAMPLE_LVGL_TASK_STACK_SIZE   (4 * 1024)
 #define EXAMPLE_LVGL_TASK_PRIORITY     2
 #define EXAMPLE_LVGL_PALETTE_SIZE      8
+
+// User lvgl headers
+#include "lvgl_watch.h"
+
+// User max30100 headers
+#include "circular_buffer.h"
+#include "max30100.h"
+#include "max30100_pulseoximeter.h"
+#define MAX30100_SENSOR_ADDR       	0x57        /*!< Address of the MAX30100 sensor */
+#define I2C_MASTER_FREQ_HZ          EXAMPLE_LCD_PIXEL_CLOCK_HZ /*!< I2C master clock frequency */
+#define REPORTING_PERIOD_MS     	1000
+
+static const char *TAG = "example";
+
+//---------------------MAX30100-----------------------------//
+// Callback (registered below) fired when a pulse is detected
+void onBeatDetected()
+{
+    ESP_LOGI(TAG, "Beat!");
+}
+
+void setup(struct pulseOximeter *pulseOximeter)
+{
+    ESP_LOGI(TAG, "Initializing pulse oximeter..");
+
+    // Initialize the PulseOximeter instance
+    // Failures are generally due to an improper I2C wiring, missing power supply
+    // or wrong target chip
+    if (!pulseOximeter_begin(pulseOximeter, PULSEOXIMETER_DEBUGGINGMODE_NONE)) {
+		ESP_LOGI(TAG, "FAILED");
+        for(;;);
+    } else {
+		ESP_LOGI(TAG, "SUCCESS");
+    }
+
+    // The default current for the IR LED is 50mA and it could be changed
+    //   by uncommenting the following line. Check max30100_registers.h for all the
+    //   available options.
+    //pulseOximeter_setIRLedCurrent(pulseOximeter, MAX30100_LED_CURR_7_6MA);
+
+    // Register a callback for the beat detection
+    pulseOximeter_setOnBeatDetectedCallback(pulseOximeter, &onBeatDetected);
+}
+
+static unsigned long millis()
+{
+	return (esp_timer_get_time() / 1000);
+}
+
+struct max30100_data buffer[RINGBUFFER_SIZE];
+struct max30100 max30100;
+// PulseOximeter is the higher level interface to the sensor
+// it offers:
+//  * beat detection reporting
+//  * heart rate calculation
+//  * SpO2 (oxidation level) calculation
+struct pulseOximeter pulseOximeter;
+
+static void pulse_update_task(void *arg)
+{
+    ESP_LOGI(TAG, "Starting Pulse Update task");
+    while (1) {
+		pulseOximeter_update(&pulseOximeter);
+        usleep(1000 * 5);
+    }
+}
+
+//--------------End of MAX30100-----------------------------//
+
 
 // To use LV_COLOR_FORMAT_I1, we need an extra buffer to hold the converted data
 static uint8_t oled_buffer[EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES / 8];
@@ -131,7 +202,8 @@ static void example_lvgl_port_task(void *arg)
 }
 
 static int show_timer = 0;
-static int max30100_hr = 0;
+static float max30100_hr = 0;
+static int max30100_spo2 = 0;
 
 static void lcd_update_task(void* arg)
 {
@@ -139,13 +211,21 @@ static void lcd_update_task(void* arg)
     ESP_LOGI(TAG, "Periodic timer called, time since boot: %lld us", time_since_boot);
 	char timebuf[128] = {0};
 	char pulsebuf[128] = {0};
+	char spo2buf[128] = {0};
 	char pulsebuf_2[128] = {0};
 
-	sprintf(timebuf, "%i", show_timer);
-	sprintf(pulsebuf, "%i", max30100_hr);
+	max30100_hr = pulseOximeter_getHeartRate(&pulseOximeter);
+	max30100_spo2 = pulseOximeter_getSpO2(&pulseOximeter);
+	ESP_LOGI(TAG, "HR = %f bpm SPO2 = %i", max30100_hr, max30100_spo2);
+
+	sntp_app_main(timebuf);
+	//sprintf(timebuf,  "Time : %i", show_timer);
+	sprintf(pulsebuf, " HR : %f", max30100_hr);
+	sprintf(spo2buf,  "SPO2 : %i", max30100_spo2);
 	_lock_acquire(&lvgl_api_lock);
 	update_time_label(timebuf);
 	update_pulse_label(pulsebuf);
+	update_spo2_label(spo2buf);
 	_lock_release(&lvgl_api_lock);
 
 //
@@ -169,8 +249,13 @@ static void lcd_update_task(void* arg)
 	ESP_LOGI(TAG, "Show timer is %i", show_timer);
 }
 
+
 void app_main(void)
 {
+	// Wi-Fi
+	char timebuf[128] = {0};
+	sntp_app_main(timebuf);
+
     ESP_LOGI(TAG, "Initialize I2C bus");
     i2c_master_bus_handle_t i2c_bus = NULL;
 
@@ -274,6 +359,8 @@ void app_main(void)
     example_lvgl_demo_ui(display);
     _lock_release(&lvgl_api_lock);
 
+	// Screen update task
+
 	// Create a periodic timer which will run every second and update the screen
     const esp_timer_create_args_t periodic_timer_args = {
             .callback = &lcd_update_task,
@@ -283,4 +370,56 @@ void app_main(void)
     esp_timer_handle_t periodic_timer;
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, 1000000));
+
+
+	// MAX30100
+	//
+	// Add max30100 i2c device to the bus
+    i2c_device_config_t dev_config = {
+        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+        .device_address = MAX30100_SENSOR_ADDR,
+        .scl_speed_hz = I2C_MASTER_FREQ_HZ,
+    };
+    i2c_master_dev_handle_t max30100_dev_handle;
+    ESP_ERROR_CHECK(i2c_master_bus_add_device(i2c_bus, &dev_config, &max30100_dev_handle));
+
+	cbuf_handle_t cbuf_handle = circular_buf_init(buffer, RINGBUFFER_SIZE);
+
+
+	max30100_init(&max30100, max30100_dev_handle, cbuf_handle);
+	//max30100_begin(&max30100);
+	
+	pulseOximeter_init(&pulseOximeter, &max30100);
+	setup(&pulseOximeter);
+
+	uint32_t tsLastReport = 0;
+
+	//// Create a periodic timer which will run every 1 millisecond and update the pulse
+    //const esp_timer_create_args_t pulse_update_timer_args = {
+    //        .callback = &pulse_update_task,
+    //        /* name is optional, but may help identify the timer when debugging */
+    //        .name = "pulse_upd_periodic"
+    //};
+    //esp_timer_handle_t pulse_update_timer;
+    //ESP_ERROR_CHECK(esp_timer_create(&pulse_update_timer_args, &pulse_update_timer));
+    //ESP_ERROR_CHECK(esp_timer_start_periodic(pulse_update_timer, 5));
+
+    ESP_LOGI(TAG, "Create pulse update task");
+    xTaskCreate(pulse_update_task, "PULSE UPDATE", EXAMPLE_LVGL_TASK_STACK_SIZE, NULL, EXAMPLE_LVGL_TASK_PRIORITY, NULL);
+
+//	while (1) {
+//		//// Read the MAX30100 HR and SPO2 data 
+//		//// Read from sensor
+//		pulseOximeter_update(&pulseOximeter);
+//		vTaskDelay(20 / portTICK_PERIOD_MS);
+//
+//		//// Grab the updated heart rate and SpO2 levels
+//		//uint32_t cur_time_ms = millis();
+//		////ESP_LOGI(TAG, "cur_time_ms = %u\n", (unsigned int) cur_time_ms);
+//		//if ((cur_time_ms - tsLastReport) > REPORTING_PERIOD_MS) {
+//		//	ESP_LOGI(TAG, "cur_time_ms = %u\n", (unsigned int) cur_time_ms);
+//		//	ESP_LOGI(TAG, "HR = %f bpm SPO2 = %i", pulseOximeter_getHeartRate(&pulseOximeter), pulseOximeter_getSpO2(&pulseOximeter));
+//		//	tsLastReport = cur_time_ms;
+//		//}
+//	}
 }
