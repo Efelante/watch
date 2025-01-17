@@ -20,7 +20,7 @@ void example_lvgl_demo_ui(lv_display_t *disp)
 	// Circular label
     lv_obj_t *label = lv_label_create(scr);
     lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL_CIRCULAR); /* Circular scroll */
-    lv_label_set_text(label, "Watch, pulseoximeter");
+    lv_label_set_text(label, "Time, max30100 pulse, coospo h808s pulse, max30100 saturation");
     /* Size of the screen (if you use rotation 90 or 270, please use lv_display_get_vertical_resolution) */
     lv_obj_set_width(label, lv_display_get_horizontal_resolution(disp));
     lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 0);
@@ -34,7 +34,7 @@ void example_lvgl_demo_ui(lv_display_t *disp)
 
 	// Pulse label
 	pulse_label = lv_label_create(scr);
-    lv_label_set_text(pulse_label, "  HR : --");
+    lv_label_set_text(pulse_label, "HR: --- | ---");
     /* Size of the screen (if you use rotation 90 or 270, please use lv_display_get_vertical_resolution) */
     lv_obj_set_width(pulse_label, lv_display_get_horizontal_resolution(disp));
     lv_obj_align(pulse_label, LV_ALIGN_TOP_MID, 0, 30);

@@ -27,6 +27,10 @@
 #include "nvs.h"
 #include "sntp.h"
 
+// Bluetooth heart rate monitor
+#include "gatt_client_coospo_h808s.h"
+extern uint8_t bt_pulse_value;
+
 
 #if CONFIG_EXAMPLE_LCD_CONTROLLER_SH1107
 #include "esp_lcd_sh1107.h"
@@ -220,7 +224,7 @@ static void lcd_update_task(void* arg)
 
 	sntp_app_main(timebuf);
 	//sprintf(timebuf,  "Time : %i", show_timer);
-	sprintf(pulsebuf, " HR : %f", max30100_hr);
+	sprintf(pulsebuf, "HR: %3i | %3u", (int) (max30100_hr + 0.5), bt_pulse_value);
 	sprintf(spo2buf,  "SPO2 : %i", max30100_spo2);
 	_lock_acquire(&lvgl_api_lock);
 	update_time_label(timebuf);
@@ -244,8 +248,9 @@ static void lcd_update_task(void* arg)
 //	//sprintf(pulsebuf_2, "%i", pulse_value);
 //	//update_pulse_label_2(pulsebuf_2);
 
+	//ESP_LOGI(TAG, "BT HRM: %u", bt_pulse_value);
+
 	show_timer++;
-	max30100_hr++;
 	ESP_LOGI(TAG, "Show timer is %i", show_timer);
 }
 
@@ -255,6 +260,14 @@ void app_main(void)
 	// Wi-Fi
 	char timebuf[128] = {0};
 	sntp_app_main(timebuf);
+
+	// Connect to bluetooth Heart Rate Monitor
+	coospo_connect();
+
+	// Connect I2C devices:
+	// * lcd: +
+	// * pulseoximeter (max30100): +
+	// * accelerometer, ...: -
 
     ESP_LOGI(TAG, "Initialize I2C bus");
     i2c_master_bus_handle_t i2c_bus = NULL;

@@ -50,7 +50,7 @@ void time_sync_notification_cb(struct timeval *tv)
 void sntp_app_main(char *outtimebuf)
 {
     ++boot_count;
-    ESP_LOGI(TAG, "Boot count: %d", boot_count);
+    //ESP_LOGI(TAG, "Boot count: %d", boot_count);
 
     time_t now;
     struct tm timeinfo;
@@ -106,7 +106,7 @@ void sntp_app_main(char *outtimebuf)
     tzset();
     localtime_r(&now, &timeinfo);
     strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-    ESP_LOGI(TAG, "The current date/time in Moscow is: %s", strftime_buf);
+    //ESP_LOGI(TAG, "The current date/time in Moscow is: %s", strftime_buf);
 	// Put time string in the output buf
     //strftime(strftime_buf, sizeof(strftime_buf), "%x\n%X", &timeinfo);
     strftime(strftime_buf, sizeof(strftime_buf), "%X", &timeinfo);	// Time only, without date
