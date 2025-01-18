@@ -35,6 +35,8 @@
 #include "max30100.h"
 #include "max30100_pulseoximeter.h"
 
+#include "mpu6050.h"
+
 #define I2C_MASTER_SCL_IO           22 //CONFIG_I2C_MASTER_SCL       /*!< GPIO number used for I2C master clock */
 #define I2C_MASTER_SDA_IO           21 //CONFIG_I2C_MASTER_SDA       /*!< GPIO number used for I2C master data  */
 #define I2C_MASTER_NUM              0  //I2C_NUM_0                   /*!< I2C port number for master dev */

@@ -11,8 +11,10 @@ idf_component_register(SRCS "i2c_oled_example_main.c"
 							"max30100libc/max30100_beat_detector.c"
 							"max30100libc/max30100_pulseoximeter.c"
 							"max30100libc/max30100_filters.c"
+							"mpu6050/mpu6050.c"
                        INCLUDE_DIRS "." 
 					   "max30100libc"
+					   "mpu6050"
 				   )
 
 

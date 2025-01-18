@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/lock.h>
+#include <math.h>
 
 // Time headers
 #include <time.h>
@@ -77,7 +78,15 @@ extern uint8_t bt_pulse_value;
 #define I2C_MASTER_FREQ_HZ          EXAMPLE_LCD_PIXEL_CLOCK_HZ /*!< I2C master clock frequency */
 #define REPORTING_PERIOD_MS     	1000
 
+// User mpu6050 headers
+#include "mpu6050.h"
+
 static const char *TAG = "example";
+
+//---------------------MPU6050-----------------------------//
+struct mpu6050 mpu6050;
+
+//--------------End of MPU6050-----------------------------//
 
 //---------------------MAX30100-----------------------------//
 // Callback (registered below) fired when a pulse is detected
@@ -129,10 +138,23 @@ static void pulse_update_task(void *arg)
     while (1) {
 		pulseOximeter_update(&pulseOximeter);
         usleep(1000 * 5);
+
+		mpu6050_getAccel(&mpu6050);
+		//ESP_LOGI(TAG, "ACCEL_XOUT = %u, ACCEL_YOUT = %u, ACCEL_ZOUT = %u", 
+		//		(uint16_t) (mpu6050.accel_x_out + 0.5), 
+		//		(uint16_t) (mpu6050.accel_y_out + 0.5), 
+		//		(uint16_t) (mpu6050.accel_z_out + 0.5));
+		float accel = sqrt(
+				mpu6050.accel_x_out * mpu6050.accel_x_out + 
+				mpu6050.accel_y_out * mpu6050.accel_y_out + 
+				mpu6050.accel_z_out * mpu6050.accel_z_out 
+				);
+		ESP_LOGI(TAG, "ACCEL is %i", (int) accel);
     }
 }
 
 //--------------End of MAX30100-----------------------------//
+
 
 
 // To use LV_COLOR_FORMAT_I1, we need an extra buffer to hold the converted data
@@ -232,6 +254,18 @@ static void lcd_update_task(void* arg)
 	update_spo2_label(spo2buf);
 	_lock_release(&lvgl_api_lock);
 
+	mpu6050_getAccel(&mpu6050);
+	//ESP_LOGI(TAG, "ACCEL_XOUT = %u, ACCEL_YOUT = %u, ACCEL_ZOUT = %u", 
+	//		(uint16_t) (mpu6050.accel_x_out + 0.5), 
+	//		(uint16_t) (mpu6050.accel_y_out + 0.5), 
+	//		(uint16_t) (mpu6050.accel_z_out + 0.5));
+	float accel = sqrt(
+			mpu6050.accel_x_out * mpu6050.accel_x_out + 
+			mpu6050.accel_y_out * mpu6050.accel_y_out + 
+			mpu6050.accel_z_out * mpu6050.accel_z_out 
+			);
+	ESP_LOGI(TAG, "ACCEL is %i", (int) accel);
+//
 //
 //#if 1
 //	sntp_app_main(timebuf);
@@ -384,55 +418,43 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, 1000000));
 
+	// MPU6050
+    i2c_device_config_t mpu6050_dev_config = {
+        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+        .device_address = MPU6050_SENSOR_ADDR,
+        .scl_speed_hz = I2C_MASTER_FREQ_HZ,
+    };
+    i2c_master_dev_handle_t mpu6050_dev_handle;
+    ESP_ERROR_CHECK(i2c_master_bus_add_device(i2c_bus, &mpu6050_dev_config, &mpu6050_dev_handle));
+
+	mpu6050_init(&mpu6050, mpu6050_dev_handle);
+
+	uint8_t mpu6050_pwr_mgmt_1_reg = mpu6050_readRegister(&mpu6050, MPU6050_REG_PWR_MGMT_1);
+    ESP_LOGI(TAG, "MPU6050 PWR_MGMT_1 reg is %x", mpu6050_pwr_mgmt_1_reg);
+	mpu6050_writeRegister(&mpu6050, MPU6050_REG_PWR_MGMT_1, 0x00);	// Disable Sleep
+	mpu6050_pwr_mgmt_1_reg = mpu6050_readRegister(&mpu6050, MPU6050_REG_PWR_MGMT_1);
+    ESP_LOGI(TAG, "MPU6050 PWR_MGMT_1 reg is %x", mpu6050_pwr_mgmt_1_reg);
+
+	uint8_t mpu6050_who_am_i_reg = mpu6050_readRegister(&mpu6050, MPU6050_REG_WHO_AM_I);
+    ESP_LOGI(TAG, "MPU6050 WHO_AM_I reg is %x", mpu6050_who_am_i_reg);
 
 	// MAX30100
 	//
 	// Add max30100 i2c device to the bus
-    i2c_device_config_t dev_config = {
+    i2c_device_config_t max30100_dev_config = {
         .dev_addr_length = I2C_ADDR_BIT_LEN_7,
         .device_address = MAX30100_SENSOR_ADDR,
         .scl_speed_hz = I2C_MASTER_FREQ_HZ,
     };
     i2c_master_dev_handle_t max30100_dev_handle;
-    ESP_ERROR_CHECK(i2c_master_bus_add_device(i2c_bus, &dev_config, &max30100_dev_handle));
+    ESP_ERROR_CHECK(i2c_master_bus_add_device(i2c_bus, &max30100_dev_config, &max30100_dev_handle));
 
 	cbuf_handle_t cbuf_handle = circular_buf_init(buffer, RINGBUFFER_SIZE);
 
-
 	max30100_init(&max30100, max30100_dev_handle, cbuf_handle);
-	//max30100_begin(&max30100);
-	
 	pulseOximeter_init(&pulseOximeter, &max30100);
 	setup(&pulseOximeter);
 
-	uint32_t tsLastReport = 0;
-
-	//// Create a periodic timer which will run every 1 millisecond and update the pulse
-    //const esp_timer_create_args_t pulse_update_timer_args = {
-    //        .callback = &pulse_update_task,
-    //        /* name is optional, but may help identify the timer when debugging */
-    //        .name = "pulse_upd_periodic"
-    //};
-    //esp_timer_handle_t pulse_update_timer;
-    //ESP_ERROR_CHECK(esp_timer_create(&pulse_update_timer_args, &pulse_update_timer));
-    //ESP_ERROR_CHECK(esp_timer_start_periodic(pulse_update_timer, 5));
-
     ESP_LOGI(TAG, "Create pulse update task");
     xTaskCreate(pulse_update_task, "PULSE UPDATE", EXAMPLE_LVGL_TASK_STACK_SIZE, NULL, EXAMPLE_LVGL_TASK_PRIORITY, NULL);
-
-//	while (1) {
-//		//// Read the MAX30100 HR and SPO2 data 
-//		//// Read from sensor
-//		pulseOximeter_update(&pulseOximeter);
-//		vTaskDelay(20 / portTICK_PERIOD_MS);
-//
-//		//// Grab the updated heart rate and SpO2 levels
-//		//uint32_t cur_time_ms = millis();
-//		////ESP_LOGI(TAG, "cur_time_ms = %u\n", (unsigned int) cur_time_ms);
-//		//if ((cur_time_ms - tsLastReport) > REPORTING_PERIOD_MS) {
-//		//	ESP_LOGI(TAG, "cur_time_ms = %u\n", (unsigned int) cur_time_ms);
-//		//	ESP_LOGI(TAG, "HR = %f bpm SPO2 = %i", pulseOximeter_getHeartRate(&pulseOximeter), pulseOximeter_getSpO2(&pulseOximeter));
-//		//	tsLastReport = cur_time_ms;
-//		//}
-//	}
 }
