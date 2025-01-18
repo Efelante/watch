@@ -81,6 +81,9 @@ extern uint8_t bt_pulse_value;
 // User mpu6050 headers
 #include "mpu6050.h"
 
+// User sd-card headers
+#include "sd_card.h"
+
 static const char *TAG = "example";
 
 //---------------------MPU6050-----------------------------//
@@ -291,6 +294,9 @@ static void lcd_update_task(void* arg)
 
 void app_main(void)
 {
+	// SD-card test
+	sd_card_test();	
+	
 	// Wi-Fi
 	char timebuf[128] = {0};
 	sntp_app_main(timebuf);

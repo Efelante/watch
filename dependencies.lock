@@ -20,10 +20,17 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 9.2.0
+  sd_card:
+    dependencies: []
+    source:
+      path: /home/brother/git/esp-idf/examples/storage/sd_card/sdmmc/components/sd_card
+      type: local
+    version: '*'
 direct_dependencies:
 - espressif/esp_lcd_sh1107
 - idf
 - lvgl/lvgl
-manifest_hash: 177abe969f00d99266527857a717500f0b12d94679445534d0fc7219a5e568da
+- sd_card
+manifest_hash: 590915468b7f7dcfed9aaca9d151b1bc08cecbdea1c92eaa4040d887e90ab694
 target: esp32
 version: 2.0.0

@@ -2,3 +2,5 @@ dependencies:
   idf: ">=4.4"
   lvgl/lvgl: "9.2.0"
   esp_lcd_sh1107: "^1"
+  sd_card:
+    path: ${IDF_PATH}/examples/storage/sd_card/sdmmc/components/sd_card
