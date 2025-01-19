@@ -9,6 +9,7 @@
 static lv_obj_t *time_label;
 static lv_obj_t *pulse_label;
 static lv_obj_t *spo2_label;
+static lv_obj_t *steps_label;
 
 void example_lvgl_demo_ui(lv_display_t *disp)
 {
@@ -45,6 +46,13 @@ void example_lvgl_demo_ui(lv_display_t *disp)
     /* Size of the screen (if you use rotation 90 or 270, please use lv_display_get_vertical_resolution) */
     lv_obj_set_width(spo2_label, lv_display_get_horizontal_resolution(disp));
     lv_obj_align(spo2_label, LV_ALIGN_TOP_MID, 0, 45);
+
+	// Steps label
+	steps_label = lv_label_create(scr);
+    lv_label_set_text(steps_label, "St : --");
+    /* Size of the screen (if you use rotation 90 or 270, please use lv_display_get_vertical_resolution) */
+    lv_obj_set_width(steps_label, lv_display_get_horizontal_resolution(disp));
+    lv_obj_align(steps_label, LV_ALIGN_TOP_MID, 64, 45);
 }
 
 void update_time_label(const char *str)
@@ -60,6 +68,11 @@ void update_pulse_label(const char *str)
 void update_spo2_label(const char *str)
 {
     lv_label_set_text(spo2_label, str);
+}
+
+void update_steps_label(const char *str)
+{
+    lv_label_set_text(steps_label, str);
 }
 
 //void update_pulse_label_2(const char *str)

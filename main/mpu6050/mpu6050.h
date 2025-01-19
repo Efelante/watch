@@ -12,9 +12,19 @@
 
 #define MPU6050_SENSOR_ADDR       	0x68        /*!< Address of the sensor */
 
+#define PEDOMETER_ACCEL_THRESHOLD	6	
+
+#define AFS_SEL_2G					0
+#define AFS_SEL_4G					1
+#define AFS_SEL_8G					2
+#define AFS_SEL_16G					3
+#define AFS_SEL_DEFAULT				AFS_SEL_8G
+
 struct mpu6050
 {
     i2c_master_dev_handle_t i2c_dev_handle;
+	uint8_t accel_fs_sel;
+	int16_t accel_lsb_sens;
 	float accel_x_out;
 	float accel_y_out;
 	float accel_z_out;
