@@ -96,7 +96,8 @@ static const char *TAG = "example";
 
 //---------------------MPU6050-----------------------------//
 struct mpu6050 mpu6050;
-uint32_t steps = 0;
+static int steps = 0;
+static int step = 0;
 
 //--------------End of MPU6050-----------------------------//
 
@@ -152,10 +153,28 @@ static void pulse_update_task(void *arg)
         usleep(1000 * 5);
 
 		mpu6050_getAccel(&mpu6050);
-		ESP_LOGI(TAG, "ACCEL_XOUT = %f, ACCEL_YOUT = %f, ACCEL_ZOUT = %f", 
-				mpu6050.accel_x_out, 
-				mpu6050.accel_y_out, 
-				mpu6050.accel_z_out);
+		//ESP_LOGI(TAG, "ACCEL_XOUT = %f, ACCEL_YOUT = %f, ACCEL_ZOUT = %f", 
+		//		mpu6050.accel_x_out, 
+		//		mpu6050.accel_y_out, 
+		//		mpu6050.accel_z_out);
+		float accel = sqrt(
+				mpu6050.accel_x_out * mpu6050.accel_x_out + 
+				mpu6050.accel_y_out * mpu6050.accel_y_out + 
+				mpu6050.accel_z_out * mpu6050.accel_z_out 
+				);
+		if (!step) {
+			if (accel > 1.1)
+			{
+				step = 1;
+				steps++;
+			}
+		} else {
+			if (accel < 1)
+			{
+				step = 0;
+			}
+		}
+		ESP_LOGI(TAG, "Accel is %f Steps is %i", accel, steps);
 
 #if 0
 		// mpu6050
@@ -289,7 +308,7 @@ static void lcd_update_task(void* arg)
 	//sprintf(timebuf,  "Time : %i", show_timer);
 	sprintf(pulsebuf, "HR: %3i | %3u", (int) (max30100_hr + 0.5), bt_pulse_value);
 	sprintf(spo2buf,  "SPO2 : %i", max30100_spo2);
-	sprintf(stepsbuf,  "St : %li", steps);
+	sprintf(stepsbuf,  "St : %i", steps);
 	_lock_acquire(&lvgl_api_lock);
 	update_time_label(timebuf);
 	update_pulse_label(pulsebuf);
@@ -297,11 +316,11 @@ static void lcd_update_task(void* arg)
 	update_steps_label(stepsbuf);
 	_lock_release(&lvgl_api_lock);
 
-	mpu6050_getAccel(&mpu6050);
-	ESP_LOGI(TAG, "ACCEL_XOUT = %f, ACCEL_YOUT = %f, ACCEL_ZOUT = %f", 
-			mpu6050.accel_x_out, 
-			mpu6050.accel_y_out, 
-			mpu6050.accel_z_out);
+	//mpu6050_getAccel(&mpu6050);
+	//ESP_LOGI(TAG, "ACCEL_XOUT = %f, ACCEL_YOUT = %f, ACCEL_ZOUT = %f", 
+	//		mpu6050.accel_x_out, 
+	//		mpu6050.accel_y_out, 
+	//		mpu6050.accel_z_out);
 	//float accel = sqrt(
 	//		mpu6050.accel_x_out * mpu6050.accel_x_out + 
 	//		mpu6050.accel_y_out * mpu6050.accel_y_out + 
@@ -487,7 +506,11 @@ void app_main(void)
 	uint8_t mpu6050_who_am_i_reg = mpu6050_readRegister(&mpu6050, MPU6050_REG_WHO_AM_I);
     ESP_LOGI(TAG, "MPU6050 WHO_AM_I reg is %x", mpu6050_who_am_i_reg);
 
-	mpu6050_writeRegister(&mpu6050, MPU6050_REG_ACCEL_CONFIG, 0x10);	// Disable Sleep
+	// Set accel full range to 8g
+	mpu6050_writeRegister(&mpu6050, MPU6050_REG_ACCEL_CONFIG, 0x10);
+
+	// Set filter bandwidth to 21 Hz
+	mpu6050_writeRegister(&mpu6050, MPU6050_REG_CONFIG, 0x04);
 
 	// MAX30100
 	//

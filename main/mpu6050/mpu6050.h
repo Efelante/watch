@@ -24,7 +24,7 @@ struct mpu6050
 {
     i2c_master_dev_handle_t i2c_dev_handle;
 	uint8_t accel_fs_sel;
-	int16_t accel_lsb_sens;
+	float accel_lsb_sens;
 	float accel_x_out;
 	float accel_y_out;
 	float accel_z_out;
