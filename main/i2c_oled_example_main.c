@@ -91,6 +91,8 @@ sdmmc_card_t card;
 const char mount_point[] = MOUNT_POINT;
 sdmmc_host_t host;
 
+// User buttons
+#include "buttons.h"
 
 static const char *TAG = "example";
 
@@ -353,6 +355,9 @@ static void lcd_update_task(void* arg)
 
 void app_main(void)
 {
+	// Buttons init
+	buttons_init();	
+	
 	// SD-card test
 	sd_card_initialize(&card, &host);
     ESP_LOGI(TAG, "%s %s!\n", "Hello", card.cid.name);
