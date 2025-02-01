@@ -52,12 +52,20 @@ static void IRAM_ATTR gpio_isr_handler(void* arg)
     xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
 }
 
+uint8_t start_button_pressed = 0;
+uint8_t stop_button_pressed = 0;
+
 static void gpio_task_example(void* arg)
 {
     uint32_t io_num;
     for (;;) {
         if (xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
             printf("GPIO[%"PRIu32"] intr, val: %d\n", io_num, gpio_get_level(io_num));
+			if (26 == io_num) {
+				start_button_pressed = 1;
+			} else if (25 == io_num) {
+				stop_button_pressed = 1;
+			}
         }
     }
 }

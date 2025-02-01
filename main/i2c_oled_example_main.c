@@ -283,6 +283,13 @@ static void example_lvgl_port_task(void *arg)
     }
 }
 
+extern uint8_t start_button_pressed;
+extern uint8_t stop_button_pressed;
+
+enum logging_state {
+	Log_off = 0,
+	Log_on = 1,
+};
 
 static void lcd_update_task(void* arg)
 {
@@ -343,44 +350,55 @@ static void lcd_update_task(void* arg)
 	// Log to file
 	static FILE *log_fd = NULL;
 	char log_path[256] = {0};
-	static int stop = 0;
 
-	if (!stop) {
-		if (log_fd == NULL) {
-			puts("Start Logging");
-			timebuf[2] = timebuf[5] = '_';	// replace ':' with '_' to create
-											// file
-			sprintf(log_path, "%s/%s.txt", MOUNT_POINT, timebuf);
-			ESP_LOGI(TAG, "Open log file %s", log_path);
-			log_fd = fopen(log_path, "w");
-			if (log_fd == NULL) {
-				ESP_LOGE(TAG, "Failed to open file for writing");
-				return;
-			}
-			timebuf[2] = timebuf[5] = ':';	// replace ':' with '_' to create
-		}
-		if (show_timer < 60) {
-			// write to sd-card
-			
-			//gps_t *gps = &esp_gps->parent;
-			
-			char data[EXAMPLE_MAX_CHAR_SIZE];
-			memset(data, 0, EXAMPLE_MAX_CHAR_SIZE);
-			sprintf(data, "%s;%u;%.05f°N;%.05f°E;%.02fm;%fm/s\n",
-				 timebuf, 
-				 bt_pulse_value,
-                 latitude, 
-				 longitude, 
-				 altitude, 
-				 speed);
-			fprintf(log_fd, data);
-		} else {
-			fclose(log_fd);
-			sd_card_deinitialize(mount_point, &card, &host);
-			stop = 1;
-			puts("Stop Logging");
-		}
+	static enum logging_state lstate = Log_off;
+
+	if (start_button_pressed) {
+		lstate = Log_on;
+		start_button_pressed = 0;
+	} else if (stop_button_pressed) {
+		lstate = Log_off;
+		stop_button_pressed = 0;
 	}
+
+	switch (lstate) {
+		case Log_on:	
+						if (NULL == log_fd) {
+							timebuf[2] = timebuf[5] = '_';	// replace ':' with '_' to create
+															// file
+							sprintf(log_path, "%s/%s.txt", MOUNT_POINT, timebuf);
+							ESP_LOGI(TAG, "Open log file %s", log_path);
+							log_fd = fopen(log_path, "w");
+							if (log_fd == NULL) {
+								ESP_LOGE(TAG, "Failed to open file for writing");
+								return;
+							}
+							timebuf[2] = timebuf[5] = ':';	// replace ':' with '_' to create
+							puts("Start Logging");
+						}
+						char data[EXAMPLE_MAX_CHAR_SIZE];
+						memset(data, 0, EXAMPLE_MAX_CHAR_SIZE);
+						sprintf(data, "%s;%u;%.05f°N;%.05f°E;%.02fm;%fm/s\n",
+								timebuf, 
+								bt_pulse_value,
+								latitude, 
+								longitude, 
+								altitude, 
+								speed);
+						fprintf(log_fd, data);
+						break;
+		case Log_off:
+						if (NULL != log_fd) {
+							fclose(log_fd);
+							log_fd = NULL;
+							puts("Stop Logging");
+						}
+						break;
+		default:
+						break;
+	}
+
+	//sd_card_deinitialize(mount_point, &card, &host);
 
 	show_timer++;
 	ESP_LOGI(TAG, "Show timer is %i", show_timer);
