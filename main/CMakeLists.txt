@@ -14,9 +14,12 @@ idf_component_register(SRCS "i2c_oled_example_main.c"
 							"mpu6050/mpu6050.c"
 							"sd_card.c"
 							"buttons.c"
+							"gps/nmea_parser_example_main.c"
+                            "gps/nmea_parser.c"
                        INCLUDE_DIRS "." 
 					   "max30100libc"
 					   "mpu6050"
+					   "gps"
 				   )
 
 

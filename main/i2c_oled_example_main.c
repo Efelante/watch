@@ -94,6 +94,9 @@ sdmmc_host_t host;
 // User buttons
 #include "buttons.h"
 
+// User gps
+#include "gps.h"
+
 static const char *TAG = "example";
 
 //---------------------MPU6050-----------------------------//
@@ -533,6 +536,9 @@ void app_main(void)
 	max30100_init(&max30100, max30100_dev_handle, cbuf_handle);
 	pulseOximeter_init(&pulseOximeter, &max30100);
 	setup(&pulseOximeter);
+
+	// Enable GPS
+	gps_init();
 
     ESP_LOGI(TAG, "Create pulse update task");
     xTaskCreate(pulse_update_task, "PULSE UPDATE", EXAMPLE_LVGL_TASK_STACK_SIZE, NULL, EXAMPLE_LVGL_TASK_PRIORITY, NULL);
