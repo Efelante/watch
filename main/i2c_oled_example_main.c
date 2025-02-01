@@ -96,6 +96,11 @@ sdmmc_host_t host;
 
 // User gps
 #include "gps.h"
+#include "nmea_parser.h"
+extern float longitude;
+extern float latitude;
+extern float altitude;
+extern float speed;
 
 static const char *TAG = "example";
 
@@ -179,7 +184,8 @@ static void pulse_update_task(void *arg)
 				step = 0;
 			}
 		}
-		ESP_LOGI(TAG, "Accel is %f Steps is %i", accel, steps);
+		// Acceleration log
+		//ESP_LOGI(TAG, "Accel is %f Steps is %i", accel, steps);
 
 #if 0
 		// mpu6050
@@ -199,23 +205,6 @@ static void pulse_update_task(void *arg)
 		}
 		//ESP_LOGI(TAG, "ACCEL is %i", (int) accel);
 
-		static int stop = 0;
-		if (!stop) {
-			if (show_timer < 60) {
-				// write to sd-card
-				char data[EXAMPLE_MAX_CHAR_SIZE];
-				const char *file_nihao = MOUNT_POINT"/nihao.txt";
-				memset(data, 0, EXAMPLE_MAX_CHAR_SIZE);
-				snprintf(data, EXAMPLE_MAX_CHAR_SIZE, "%i ", (int) accel);
-				esp_err_t ret = s_example_write_file(file_nihao, data);
-				if (ret != ESP_OK) {
-					return;
-				}
-			} else {
-				sd_card_deinitialize(mount_point, &card, &host);
-				stop = 1;
-			}
-		}
 #endif
     }
 }
@@ -350,6 +339,48 @@ static void lcd_update_task(void* arg)
 //	//update_pulse_label_2(pulsebuf_2);
 
 	//ESP_LOGI(TAG, "BT HRM: %u", bt_pulse_value);
+	
+	// Log to file
+	static FILE *log_fd = NULL;
+	char log_path[256] = {0};
+	static int stop = 0;
+
+	if (!stop) {
+		if (log_fd == NULL) {
+			puts("Start Logging");
+			timebuf[2] = timebuf[5] = '_';	// replace ':' with '_' to create
+											// file
+			sprintf(log_path, "%s/%s.txt", MOUNT_POINT, timebuf);
+			ESP_LOGI(TAG, "Open log file %s", log_path);
+			log_fd = fopen(log_path, "w");
+			if (log_fd == NULL) {
+				ESP_LOGE(TAG, "Failed to open file for writing");
+				return;
+			}
+			timebuf[2] = timebuf[5] = ':';	// replace ':' with '_' to create
+		}
+		if (show_timer < 60) {
+			// write to sd-card
+			
+			//gps_t *gps = &esp_gps->parent;
+			
+			char data[EXAMPLE_MAX_CHAR_SIZE];
+			memset(data, 0, EXAMPLE_MAX_CHAR_SIZE);
+			sprintf(data, "%s;%u;%.05f°N;%.05f°E;%.02fm;%fm/s\n",
+				 timebuf, 
+				 bt_pulse_value,
+                 latitude, 
+				 longitude, 
+				 altitude, 
+				 speed);
+			fprintf(log_fd, data);
+		} else {
+			fclose(log_fd);
+			sd_card_deinitialize(mount_point, &card, &host);
+			stop = 1;
+			puts("Stop Logging");
+		}
+	}
 
 	show_timer++;
 	ESP_LOGI(TAG, "Show timer is %i", show_timer);

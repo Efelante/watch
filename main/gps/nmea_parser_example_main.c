@@ -14,6 +14,8 @@
 #include "esp_log.h"
 #include "nmea_parser.h"
 
+#include "gps.h"
+
 static const char *TAG = "gps_demo";
 
 #define TIME_ZONE (+3)   //Moscow time

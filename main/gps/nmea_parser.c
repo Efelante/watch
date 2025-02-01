@@ -13,6 +13,8 @@
 #include "esp_log.h"
 #include "nmea_parser.h"
 
+#include "gps.h"
+
 /**
  * @brief NMEA Parser runtime buffer size
  *
@@ -28,6 +30,11 @@
 ESP_EVENT_DEFINE_BASE(ESP_NMEA_EVENT);
 
 static const char *GPS_TAG = "nmea_parser";
+
+float longitude = 0;
+float latitude = 0;
+float altitude = 0;
+float speed = 0;
 
 /**
  * @brief GPS parser library runtime structure
@@ -146,6 +153,9 @@ static void parse_gga(esp_gps_t *esp_gps)
     default:
         break;
     }
+	latitude  = esp_gps->parent.latitude;
+	longitude = esp_gps->parent.longitude;
+	altitude  = esp_gps->parent.altitude;
 }
 #endif
 
@@ -280,6 +290,9 @@ static void parse_rmc(esp_gps_t *esp_gps)
     default:
         break;
     }
+	latitude  = esp_gps->parent.latitude;
+	longitude = esp_gps->parent.longitude;
+	speed  = esp_gps->parent.speed;
 }
 #endif
 
@@ -318,6 +331,8 @@ static void parse_gll(esp_gps_t *esp_gps)
     default:
         break;
     }
+	latitude  = esp_gps->parent.latitude;
+	longitude = esp_gps->parent.longitude;
 }
 #endif
 
@@ -346,6 +361,7 @@ static void parse_vtg(esp_gps_t *esp_gps)
     default:
         break;
     }
+	speed  = esp_gps->parent.speed;
 }
 #endif
 

@@ -7,7 +7,7 @@
 #endif
 
 #define MOUNT_POINT "/sdcard"
-#define EXAMPLE_MAX_CHAR_SIZE    64
+#define EXAMPLE_MAX_CHAR_SIZE   256 
 
 esp_err_t s_example_write_file(const char *path, char *data);
 void sd_card_initialize(sdmmc_card_t *card, sdmmc_host_t *host);
